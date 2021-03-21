@@ -119,7 +119,7 @@ const groupMediaQueries = () => {
     str = str.replace(/@media \(((max|min)-width: \w+?px)\)( (and|or) \((max|min)-width: \w+?px\))? {\n.+?}\n}/gis, '');
     str = str + full;
     // console.log(str);
-    grouped.textContent = str;
+    grouped.innerHTML = `<pre>${str}</pre>`;
 };
 
 // groupMediaQueries();

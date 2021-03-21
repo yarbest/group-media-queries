@@ -1,0 +1,37 @@
+p {
+    border: 1px solid #000;
+    width: 2000px;
+    padding-bottom: 500px;
+    font-size: 100px;
+}
+@media (min-width: 1200px) {
+}
+@media (max-width: 4000px) {
+    p {
+        width: calc(100px + 1900 * ((100vw - 320px) / 3680));
+    }
+    p {
+        padding-bottom: calc(40px + 460 * ((100vw - 320px) / 3680));
+    }
+    p {
+        font-size: calc(16px + 84 * ((100vw - 320px) / 3680));
+    }
+}
+@media (max-width: 1199px) {
+}
+@media (max-width: 991px) {
+}
+@media (max-width: 767px) {
+    p {
+        background-color: red;
+    }
+    p {
+        font-size: 18px;
+    }
+}
+@media (max-width: 575px) {
+}
+@media (max-width: 480px) {
+}
+@media (max-width: 360px) {
+}

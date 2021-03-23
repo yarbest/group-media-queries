@@ -1,127 +1,93 @@
 const groupMediaQueries = () => {
     let str = ungrouped.value;
-
     let arr = [];
+    let arrWithMaxMedia = []; //тут лежат запросы, у которых значение max-width, это еше не сгруппированные
+    let arrWithMinMedia = [];
+    //если запрос составной (max-width: 855px) and (min-width: 400px), то при определении в какой массив его отправить, будет смотреться на первую скобку
 
+    let groupedQueriesWithMaxWidth = [];
+    let groupedQueriesWithMinWidth = [];
+
+    let result = [];
+
+    //формируем 2 массива, один с maw-width, другой с min-width
     str.replace(
-        /(?<=@media (\((max|min)-width: \w+?px\)( (and|or) \((max|min)-width: \w+?px\))?) {\n).+?}(?=\s+})/gis,
+        /(?<=@media (\((max|min)-width: \w+?px\)( (and|or) \((max|min)-width: \w+?px\))?)\s?{\n).+?}(?=\s+})/gis,
         (match, group1, group2) => {
             let obj = {};
-            Object.defineProperty(obj, group1, {
-                // в group1 лежит медиа-условие, вот такое (max-width: число_px)
-                value: match,
-                writable: true,
-                enumerable: true,
-                configurable: true,
-            });
-            arr.push(obj);
+            obj[group1] = match; // в group1 лежит медиа-условие, вот такое (max-width: число_px), в group2 - либо max, либо min
+            group2 === 'max' ? arrWithMaxMedia.push(obj) : arrWithMinMedia.push(obj);
         }
     );
-    // console.log(arr);
-    //тут будут лежать все медиа запросы именно этой ширины, но еще не сгруппированные, вот так:
-    //"@media (max-width: 480px) { ...... }"
-    //"@media (max-width: 480px) { ...... }"
 
-    let resultMax360 = [];
-    let resultMax480 = [];
-    let resultMax575 = [];
-    let resultMax767 = [];
-    let resultMax991 = [];
-    let resultMax1199 = [];
-    let resultMin1200 = [];
-    let otherResults = {}; //это объект, так как в виде ключа нам нужно хранить, какая именно ширина у запроса, а в виде значение объекта хранится css-правила для этого медиа-запроса
+    //сортируем медиа запросы по убыванию
+    arrWithMaxMedia.sort((a, b) => +Object.keys(b)[0].match(/\d+(?=px)/) - +Object.keys(a)[0].match(/\d+(?=px)/));
+    //в a и b лежат объекты, из их ключей получаем значение ширины в медиа-запросе //нужно определить, чья ширина больше, для простоты, представим что в a и b передаются именно ширины//допустим есть массив из разных ширин [444, 555, 777, 222]//сначала в функцию идут 444 и 555 как а и b соответственно, мы от b отнимаем a (можно и на оборот, тогда сортировка буте по возрастанию), и получаем положительное число,//а если функция получает положительное число, то она в массиве поставит b раньше чем а //в итоге массив становится таким : [555, 444, 777, 222]//дальше вместо а берется 444 а вместо b - 777, производим вычисление b - a и получаем положительное число,//значит в массиве элемент b будет стоять раньше чем а, в итоге получаем массив: [555, 777, 444, 222]// дальше вместо а берется 444 а вместо b - 222, производим вычисление b - a и получаем Отрицательное число,//а если получаем отрицательное число, то элемент а будет стоять в массиве раньше чем b, в итоге массив осталься такой же: [555, 777, 444, 222]//затем сортировка начинается опять, с первого элемента: 777 - 555 = >0 , значит 777 будет стоять раньше чем 555, получаем: [777, 555, 444, 222], и так далее
+    //в кратце, если функция возвращает >0 то а правее b, если возвращает <0, то а левее b, если =0, то ничего не меняется
+    //я как всегда все перепутал в массиве [333, 444, 222], сначала вместо а и b будут не 333 и 444, а наоборот, 444 и 333, тоесть а - это следующий элемент, а не текущий
+    //a-b по возрастанию, b-a по убыванию
+    arrWithMinMedia.sort((a, b) => +Object.keys(b)[0].match(/\d+(?=px)/) - +Object.keys(a)[0].match(/\d+(?=px)/));
 
-    //заполняем предыдущие массивы
-    arr.forEach((obj) => {
-        if (Object.keys(obj)[0] === '(max-width: 480px)') resultMax480.push(Object.values(obj));
-        else if (Object.keys(obj)[0] === '(max-width: 360px)') resultMax360.push(Object.values(obj));
-        else if (Object.keys(obj)[0] === '(max-width: 575px)') resultMax575.push(Object.values(obj));
-        else if (Object.keys(obj)[0] === '(max-width: 767px)') resultMax767.push(Object.values(obj));
-        else if (Object.keys(obj)[0] === '(max-width: 991px)') resultMax991.push(Object.values(obj));
-        else if (Object.keys(obj)[0] === '(max-width: 1199px)') resultMax1199.push(Object.values(obj));
-        else if (Object.keys(obj)[0] === '(min-width: 1200px)') resultMin1200.push(Object.values(obj));
-        else {
-            //если такой медиа запрос уже встречался, то нужно его дополнить, а не перезаписывать
-            if (otherResults.hasOwnProperty(Object.keys(obj))) {
-                otherResults[Object.keys(obj)] = otherResults[Object.keys(obj)] + '\n' + Object.values(obj)[0];
-                return;
-            }
-            Object.defineProperty(otherResults, Object.keys(obj), {
-                value: Object.values(obj)[0],
-                writable: true,
-                enumerable: true,
-                configurable: true,
-            });
+    //Группируем одинаковые медиа запросы, но составные запросы сразу идут в результат, без группировки
+    arrWithMaxMedia.forEach((item, i, arr) => {
+        //если текущий объект имеет в себе составной запрос, то его группировать не надо и он сразу идет в результат
+        if (/and|or/.test(Object.keys(arr[i])[0])) {
+            groupedQueriesWithMaxWidth.push(arr[i]);
+            return;
+        }
+
+        if (arr[i] === arr[0]) return; //если в первом объекте находится не составной запрос, то нужно его пропустить,
+        //так как ниже по коду, текущий объект, берет значение предыдущего, а для первого объекта нету предыдущего, так как он самый первый
+
+        //если предыдущий объект хранит в себе составной запрос, то его значение брать не надо, так как составные запросы не группируем
+        if (/and|or/.test(Object.keys(arr[i - 1])[0])) return;
+
+        //если ширина медиа запроса у двух соседних объектов сходится, то нужно их объединить
+        if (Object.keys(arr[i])[0].match(/\d+(?=px)/)[0] === Object.keys(arr[i - 1])[0].match(/\d+(?=px)/)[0]) {
+            arr[i][Object.keys(arr[i])[0]] = Object.values(arr[i])[0] + '\n' + Object.values(arr[i - 1])[0]; //добавляем в конец текущего объекта значение предыдущего
+        }
+        //в значение текущего объекта, в конец дописываем значение предыдущего объекта, допустим есть 3 объекта,
+        //a, b, и c, объект b добавляет себе значения объекта a, затем объект c добавляет себе значение объекта b,
+        //в котором уже лежат значения объекта a, соответственно в объекте c лежат значения объекта а и b
+        //затем объект c идет в результат
+
+        //если объект последний или после него идет объект с другой шириной в медиа запросе, то этот объект идет в результат, так как в нем уже все сгруппированно для этой ширины
+        if (
+            arr[i] === arr[arr.length - 1] ||
+            Object.keys(arr[i])[0].match(/\d+(?=px)/)[0] !== Object.keys(arr[i + 1])[0].match(/\d+(?=px)/)[0]
+        ) {
+            groupedQueriesWithMaxWidth.push(arr[i]);
         }
     });
-    //в эти массивы будут складываться css-правила, подходящего медиа-запроса
-    let groupedMax360 = ['@media (max-width: 360px) {\n'];
-    let groupedMax480 = ['@media (max-width: 480px) {\n'];
-    let groupedMax575 = ['@media (max-width: 575px) {\n'];
-    let groupedMax767 = ['@media (max-width: 767px) {\n'];
-    let groupedMax991 = ['@media (max-width: 991px) {\n'];
-    let groupedMax1199 = ['@media (max-width: 1199px) {\n'];
-    let groupedMin1200 = ['@media (min-width: 1200px) {\n'];
 
-    //массивы, для не частых брейк поинтов
-    let maxWidthBetween320and360 = [];
-    let maxWidthBetween360and480 = [];
-    let maxWidthBetween480and575 = [];
-    let maxWidthBetween575and767 = [];
-    let maxWidthBetween767and991 = [];
-    let maxWidthBetween991and1199 = [];
-    let maxWidthMoreThan1199 = [];
-
-    for (let media in otherResults) {
-        //в media лежат в таком виде (max-width: 850px) and (min-width: 767px)
-        if (media.slice(1, 4) === 'max') {
-            let widthNumber = +media.match(/\d+(?=px)/)[0]; //
-
-            if (widthNumber > 320 && widthNumber < 360) maxWidthBetween320and360.push(`@media ${media} {\n${otherResults[media]}\n}`);
-            else if (widthNumber > 360 && widthNumber < 480) maxWidthBetween360and480.push(`@media ${media} {\n${otherResults[media]}\n}`);
-            else if (widthNumber > 480 && widthNumber < 575) maxWidthBetween480and575.push(`@media ${media} {\n${otherResults[media]}\n}`);
-            else if (widthNumber > 575 && widthNumber < 767) maxWidthBetween575and767.push(`@media ${media} {\n${otherResults[media]}\n}`);
-            else if (widthNumber > 767 && widthNumber < 991) maxWidthBetween767and991.push(`@media ${media} {\n${otherResults[media]}\n}`);
-            else if (widthNumber > 991 && widthNumber < 1199)
-                maxWidthBetween991and1199.push(`@media ${media} {\n${otherResults[media]}\n}`);
-            else if (widthNumber > 1199) maxWidthMoreThan1199.push(`@media ${media} {\n${otherResults[media]}\n}`);
-            //else {} для отрицательных!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    arrWithMinMedia.forEach((item, i, arr) => {
+        if (/and|or/.test(Object.keys(arr[i])[0])) {
+            groupedQueriesWithMinWidth.push(arr[i]);
+            return;
         }
-    }
-    maxWidthBetween320and360 = maxWidthBetween320and360.join('\n\n');
-    maxWidthBetween360and480 = maxWidthBetween360and480.join('\n\n');
-    maxWidthBetween480and575 = maxWidthBetween480and575.join('\n\n');
-    maxWidthBetween575and767 = maxWidthBetween575and767.join('\n\n');
-    maxWidthBetween767and991 = maxWidthBetween767and991.join('\n\n');
-    maxWidthBetween991and1199 = maxWidthBetween991and1199.join('\n\n');
-    maxWidthMoreThan1199 = maxWidthMoreThan1199.join('\n\n');
+        if (arr[i] === arr[0]) return;
+        if (/and|or/.test(Object.keys(arr[i - 1])[0])) return;
 
-    //формируем строку сгруппированного медиа-запроса
-    const groupMedia = (ungrouped, futureGrouped) => {
-        ungrouped.forEach((str) => futureGrouped.push(str + '\n'));
-        futureGrouped.push('}');
-        futureGrouped = futureGrouped.join('');
-        return futureGrouped;
-    };
+        if (Object.keys(arr[i])[0].match(/\d+(?=px)/)[0] === Object.keys(arr[i - 1])[0].match(/\d+(?=px)/)[0]) {
+            arr[i][Object.keys(arr[i])[0]] = Object.values(arr[i])[0] + '\n' + Object.values(arr[i - 1])[0];
 
-    groupedMax360 = groupMedia(resultMax360, groupedMax360);
-    groupedMax480 = groupMedia(resultMax480, groupedMax480);
-    groupedMax575 = groupMedia(resultMax575, groupedMax575);
-    groupedMax767 = groupMedia(resultMax767, groupedMax767);
-    groupedMax991 = groupMedia(resultMax991, groupedMax991);
-    groupedMax1199 = groupMedia(resultMax1199, groupedMax1199);
-    groupedMin1200 = groupMedia(resultMin1200, groupedMin1200);
+            if (
+                arr[i] === arr[arr.length - 1] ||
+                Object.keys(arr[i])[0].match(/\d+(?=px)/)[0] !== Object.keys(arr[i + 1])[0].match(/\d+(?=px)/)[0]
+            ) {
+                groupedQueriesWithMinWidth.push(arr[i]);
+            }
+        }
+    });
 
-    //складываем все в общую строку
-    let full = `${groupedMin1200} \n\n ${maxWidthMoreThan1199} \n\n ${groupedMax1199} \n\n ${maxWidthBetween991and1199} \n\n ${groupedMax991} \n\n ${maxWidthBetween767and991} \n\n ${groupedMax767} \n\n ${maxWidthBetween575and767} \n\n ${groupedMax575} \n\n ${maxWidthBetween480and575} \n\n ${groupedMax480} \n\n ${maxWidthBetween360and480} \n\n ${groupedMax360} \n\n ${maxWidthBetween320and360}`;
+    //подготавливаем готовую строку, проходим по массивам, и собираем из них уже сгруппированные запросы,  сначала в результат идет массив, в котором запросы через min-width
+    groupedQueriesWithMinWidth.forEach((item) => result.push(`@media ${Object.keys(item)[0]} {\n${Object.values(item)[0]}\n}\n`));
 
-    //убираем все мадиа-запросы из оригинала, и в конец добавляем свои
-    str = str.replace(/@media \(((max|min)-width: \w+?px)\)( (and|or) \((max|min)-width: \w+?px\))? {\n.+?}\n}/gis, '');
-    str = str + full;
-    // console.log(str);
-    grouped.innerHTML = `<pre>${str}</pre>`;
+    groupedQueriesWithMaxWidth.forEach((item) => result.push(`@media ${Object.keys(item)[0]} {\n${Object.values(item)[0]}\n}\n`));
+
+    result = result.join('\n');
+    result = str.replace(/@media (\((max|min)-width: \w+?px\)( (and|or) \((max|min)-width: \w+?px\))?)\s?{\n.+?}\s+}/gs, '') + result;
+    console.log(result);
 };
-
-// groupMediaQueries();
 
 btn.addEventListener('click', groupMediaQueries);

@@ -1,6 +1,5 @@
 const groupMediaQueries = () => {
-    
-    let str = ungrouped.value
+    let str = ungrouped.value;
 
     let arr = [];
     let arrWithMaxMedia = []; //тут лежат запросы, у которых значение max-width, это еше не сгруппированные
@@ -21,6 +20,7 @@ const groupMediaQueries = () => {
             group2 === 'max' ? arrWithMaxMedia.push(obj) : arrWithMinMedia.push(obj);
         }
     );
+
     //сортируем медиа запросы сначала по убыванию, а затем если для ширины 767px есть составные запросы, то они должны быть выше, чем остальные запросы для этой ширины
     arrWithMaxMedia.sort((a, b) => {
         return +Object.keys(b)[0].match(/\d+(?=px)/) - +Object.keys(a)[0].match(/\d+(?=px)/);
@@ -30,6 +30,8 @@ const groupMediaQueries = () => {
             return -1;
         }
     });
+
+    // console.log(arrWithMaxMedia);
 
     //если функция возвращает >0 то а правее b, если возвращает <0, то а левее b, если =0, то ничего не меняется //массиве [333, 444, 222], сначала вместо а и b будут не 333 и 444, а наоборот, 444 и 333, тоесть а - это следующий элемент, а не текущий //a-b по возрастанию, b-a по убыванию
     arrWithMinMedia.sort((a, b) => +Object.keys(b)[0].match(/\d+(?=px)/) - +Object.keys(a)[0].match(/\d+(?=px)/));
@@ -67,6 +69,11 @@ const groupMediaQueries = () => {
             groupedQueriesWithMaxWidth.push(arr[i]);
             return;
         }
+
+        //если на предыдущих ифах мы не вышли из цикла, тогда все ок, и можно взять значение из предыдущего объекта
+        if (arr[i] !== arr[0] && Object.keys(arr[i])[0] === Object.keys(arr[i - 1])[0]) {
+            arr[i][Object.keys(arr[i])[0]] = Object.values(arr[i])[0] + '\n' + Object.values(arr[i - 1])[0]; //добавляем в конец текущего объекта значение предыдущего
+        }
     });
 
     arrWithMinMedia.forEach((item, i, arr) => {
@@ -87,7 +94,13 @@ const groupMediaQueries = () => {
             groupedQueriesWithMinWidth.push(arr[i]);
             return;
         }
+
+        if (arr[i] !== arr[0] && Object.keys(arr[i])[0] === Object.keys(arr[i - 1])[0]) {
+            arr[i][Object.keys(arr[i])[0]] = Object.values(arr[i])[0] + '\n' + Object.values(arr[i - 1])[0];
+        }
     });
+
+    // console.log(groupedQueriesWithMaxWidth);
 
     //подготавливаем готовую строку, проходим по массивам, и собираем из них уже сгруппированные запросы,  сначала в результат идет массив, в котором запросы через min-width
     groupedQueriesWithMinWidth.forEach((item) => result.push(`@media ${Object.keys(item)[0]} {\n${Object.values(item)[0]}\n}\n`));

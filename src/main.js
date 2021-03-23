@@ -1,6 +1,6 @@
 const groupMediaQueries = () => {
     
-    let str = ugrouped.value
+    let str = ungrouped.value
 
     let arr = [];
     let arrWithMaxMedia = []; //тут лежат запросы, у которых значение max-width, это еше не сгруппированные

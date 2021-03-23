@@ -87,7 +87,8 @@ const groupMediaQueries = () => {
 
     result = result.join('\n');
     result = str.replace(/@media (\((max|min)-width: \w+?px\)( (and|or) \((max|min)-width: \w+?px\))?)\s?{\n.+?}\s+}/gs, '') + result;
-    console.log(result);
+    // console.log(result);
+    grouped.textContent = result;
 };
 
 btn.addEventListener('click', groupMediaQueries);

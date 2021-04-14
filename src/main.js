@@ -51,7 +51,7 @@ const groupMediaQueries = () => {
 
         //если в первом объекте находится не составной запрос, а после него идет объект с другим значением запроса, то нужно его добавить в результат и выйти,
         //так как ниже по коду, текущий объект, берет значение предыдущего, а для первого объекта нету предыдущего, так как он самый первый
-        if (arr[i] === arr[0] && Object.keys(arr[i])[0] !== Object.keys(arr[i + 1])[0]) {
+        if (arr.length > 1 && arr[i] === arr[0] && Object.keys(arr[i])[0] !== Object.keys(arr[i + 1])[0]) {
             groupedQueriesWithMaxWidth.push(arr[i]);
             return;
         }
@@ -82,7 +82,7 @@ const groupMediaQueries = () => {
             return;
         }
 
-        if (arr[i] === arr[0] && Object.keys(arr[i])[0] !== Object.keys(arr[i + 1])[0]) {
+        if (arr.length > 1 && arr[i] === arr[0] && Object.keys(arr[i])[0] !== Object.keys(arr[i + 1])[0]) {
             groupedQueriesWithMinWidth.push(arr[i]);
             return;
         }
